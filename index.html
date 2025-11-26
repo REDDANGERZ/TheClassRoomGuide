@@ -83,7 +83,7 @@
 
     .media-preview img,
     .media-preview video{
-      max-width:160px;
+      max-width:180px;
       border-radius:10px;
       border:2px solid var(--accent);
     }
@@ -103,6 +103,59 @@
     <label>سبب الترشيح:</label>
     <textarea rows="4" placeholder="اكتب السبب هنا"></textarea>
 
+    <label>إضافة صور أو فيديو (اختياري):</label>
+    <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
+
+    <div class="media-preview" id="mediaPreview"></div>
+
+    <button class="btn">إرسال</button>
+  </div>
+
+
+  <script>
+
+    /* 🎨 تغيير اللون عند كل دخول */
+    function randomAccentColor() {
+      const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
+      document.documentElement.style.setProperty('--accent', randomColor);
+      document.documentElement.style.setProperty('--border-accent', randomColor);
+    }
+    randomAccentColor();
+
+
+    /* 📸🎥 معاينة الصور والفيديو */
+    const input = document.getElementById('mediaInput');
+    const preview = document.getElementById('mediaPreview');
+
+    input.addEventListener('change', function() {
+      preview.innerHTML = ""; // حذف القديم
+
+      [...this.files].forEach(file => {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          let element;
+
+          if(file.type.startsWith("image/")){
+            element = document.createElement("img");
+          } 
+          else if(file.type.startsWith("video/")){
+            element = document.createElement("video");
+            element.controls = true;
+          }
+
+          element.src = e.target.result;
+          preview.appendChild(element);
+        }
+
+        reader.readAsDataURL(file);
+      })
+    });
+
+  </script>
+
+</body>
+</html>
     <label>إضافة صور أو فيديو (اختياري):</label>
     <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
 
@@ -358,4 +411,5 @@
 
 </html>
     
+
 
