@@ -6,208 +6,103 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>قائد الصف</title>
+  <link rel="icon" href="cd568523-cef5-466c-91e5-269c29984570.png" type="image/png">
 
   <style>
-
     :root{
       --accent:#0b74de;
       --bg:#f6f8fb;
-      --border-accent: var(--accent);
+      --border-accent: rgb(104, 231, 240);
     }
 
-    *{margin:0;padding:0;box-sizing:border-box;font-family:"Tajawal",sans-serif}
-
-    body{
-      background:var(--bg);
-      padding:20px;
-      display:flex;
-      flex-direction:column;
-      gap:20px;
-    }
-
-    h1{
-      color:var(--accent);
-      text-align:center;
-      font-size:28px;
-      margin-bottom:10px;
-    }
-
-    .card{
-      background:white;
-      padding:20px;
-      border-radius:15px;
-      border:2px solid var(--border-accent);
-      box-shadow:0 0 10px rgba(0,0,0,0.05);
-    }
-
-    label{
-      font-size:18px;
-      margin-bottom:10px;
-      display:block;
-      color:#333;
-    }
-
-    input[type="text"], textarea{
-      width:100%;
-      padding:12px;
-      border-radius:10px;
-      border:1px solid #ccc;
-      outline:none;
-      margin-bottom:15px;
-      font-size:16px;
-    }
-
-    .btn{
-      background:var(--accent);
-      color:white;
-      padding:12px 10px;
-      width:100%;
-      border:none;
-      border-radius:12px;
-      font-size:18px;
-      cursor:pointer;
-      transition:.3s;
-    }
-
-    .btn:hover{
-      opacity:.85;
-    }
-
-    /* منطقة عرض الصور والفيديو */
-    .media-preview{
-      display:flex;
-      flex-wrap:wrap;
-      gap:15px;
-      margin-top:15px;
-    }
-
-    .media-preview img,
-    .media-preview video{
-      max-width:180px;
-      border-radius:10px;
-      border:2px solid var(--accent);
-    }
-
+    body{font-family:"Cairo",Tahoma,Arial,sans-serif;background:var(--bg);margin:0;padding:0;}
+    .container{max-width:900px;margin:30px auto;padding:20px;background:white;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid var(--border-accent);}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    h1{margin:0;font-size:22px;color:#222}
+    .badge{font-size:13px;padding:6px 10px;border-radius:6px;background:var(--accent);color:white;border:1px solid var(--border-accent);}
+    form{display:flex;gap:8px;flex-wrap:wrap;border:1px solid var(--border-accent);padding:10px;border-radius:6px;}
+    input,textarea,button,select{padding:8px 10px;border-radius:6px;border:1px solid var(--border-accent);font-size:14px}
+    textarea{min-height:80px;resize:vertical}
+    .posts{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+    .post{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fff;position:relative;}
+    .post h3{margin:0 0 6px 0}
+    .meta{font-size:12px;color:#666;margin-bottom:8px}
+    .actions{display:flex;gap:8px;margin-top:8px;align-items:center}
+    .btn{cursor:pointer;border:1px solid var(--border-accent);}
+    .btn.primary{background:var(--accent);color:white;border:none}
+    .btn.ghost{background:transparent;border:1px solid var(--border-accent)}
+    .emoji-bar{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+    .emoji{cursor:pointer;font-size:20px;transition:transform 0.2s}
+    .emoji:hover{transform:scale(1.2)}
+    .emoji-count{font-size:13px;color:#333;margin-left:3px}
+    .login-box{display:flex;gap:8px;align-items:center}
+    .right{display:flex;gap:12px;align-items:center}
+    footer{font-size:13px;color:#666;margin-top:18px;text-align:center}
+    .small{font-size:13px;color:#444}
+    .pass-change{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fafcff;margin-top:12px}
+    .hint{font-size:13px;color:#666;margin-top:8px}
+    img{max-width:100%;border-radius:6px;margin-top:8px;}
+    * { border-color: var(--border-accent); }
   </style>
 
 </head>
 
 <body>
 
-  <h1>📌 نموذج قائد الصف</h1>
+  <div class="container">
 
-  <div class="card">
-    <label>اسم الطالب:</label>
-    <input type="text" placeholder="اكتب اسمك هنا">
+    <header>
+      <div>
+        <h1>قائد الصف <span class="small">— لوحة تفاعلية</span></h1>
+        <div class="small">إدارة المنشورات والتفاعلات داخل الصف</div>
+      </div>
 
-    <label>سبب الترشيح:</label>
-    <textarea rows="4" placeholder="اكتب السبب هنا"></textarea>
+      <div class="right">
+        <div id="userInfo" class="small"></div>
+        <div id="authButtons" class="login-box"></div>
+      </div>
+    </header>
 
-    <label>إضافة صور أو فيديو (اختياري):</label>
-    <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
+    <section id="mainArea">
 
-    <div class="media-preview" id="mediaPreview"></div>
+      <div id="loginArea">
+        <form id="loginForm" onsubmit="return false">
+          <select id="loginSelect" aria-label="اختر نوع الحساب">
+            <option value="guest">حساب ضيف</option>
+            <option value="admin">حساب ADMIN</option>
+          </select>
+          <input id="passwordInput" type="password" placeholder="كلمة المرور (لـ ADMIN)" />
+          <button id="loginBtn" class="btn primary">دخول</button>
+        </form>
+      </div>
 
-    <button class="btn">إرسال</button>
-  </div>
+      <div id="postEditor" style="display:none;margin-top:12px">
+        <h3>إضافة منشور جديد</h3>
+        <form id="postForm" onsubmit="return false">
+          <input id="postTitle" placeholder="عنوان المنشور" />
+          <input id="postImage" type="file" accept="image/*" />
+          <textarea id="postBody" placeholder="نص المنشور..."></textarea>
+          
+          <div style="display:flex;gap:8px;justify-content:flex-start">
+            <button id="addPostBtn" class="btn primary">نشر</button>
+            <button id="clearPostsBtn" class="btn ghost">مسح كل المنشورات (محلي)</button>
+          </div>
+        </form>
 
+        <div id="passChangeBox" class="pass-change" style="display:none">
+          <h4>تغيير كلمة مرور الأدمن</h4>
+          <input id="currentPass" type="password" placeholder="كلمة المرور الحالية" />
+          <input id="newPass" type="password" placeholder="كلمة المرور الجديدة" />
+          <input id="confirmPass" type="password" placeholder="تأكيد كلمة المرور الجديدة" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="changePassBtn" class="btn primary">تغيير كلمة المرور</button>
+            <button id="cancelChangeBtn" class="btn ghost" type="button">إلغاء</button>
+          </div>
+          <div class="hint">بعد التغيير، ستصبح هذه هي كلمة المرور المطلوبة لتسجيل الدخول كـ ADMIN.</div>
+        </div>
+      </div>
 
-  <script>
-
-    /* 🎨 تغيير اللون عند كل دخول */
-    function randomAccentColor() {
-      const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
-      document.documentElement.style.setProperty('--accent', randomColor);
-      document.documentElement.style.setProperty('--border-accent', randomColor);
-    }
-    randomAccentColor();
-
-
-    /* 📸🎥 معاينة الصور والفيديو */
-    const input = document.getElementById('mediaInput');
-    const preview = document.getElementById('mediaPreview');
-
-    input.addEventListener('change', function() {
-      preview.innerHTML = ""; // حذف القديم
-
-      [...this.files].forEach(file => {
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-          let element;
-
-          if(file.type.startsWith("image/")){
-            element = document.createElement("img");
-          } 
-          else if(file.type.startsWith("video/")){
-            element = document.createElement("video");
-            element.controls = true;
-          }
-
-          element.src = e.target.result;
-          preview.appendChild(element);
-        }
-
-        reader.readAsDataURL(file);
-      })
-    });
-
-  </script>
-
-</body>
-</html>
-    <label>إضافة صور أو فيديو (اختياري):</label>
-    <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
-
-    <div class="media-preview" id="mediaPreview"></div>
-
-    <button class="btn">إرسال</button>
-  </div>
-
-
-  <script>
-
-    /* 🎨 تغيير اللون عند كل دخول */
-    function randomAccentColor() {
-      const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
-      document.documentElement.style.setProperty('--accent', randomColor);
-      document.documentElement.style.setProperty('--border-accent', randomColor);
-    }
-    randomAccentColor();
-
-
-    /* 📸 معاينة الصور والفيديو بعد الرفع */
-    const input = document.getElementById('mediaInput');
-    const preview = document.getElementById('mediaPreview');
-
-    input.addEventListener('change', function() {
-      preview.innerHTML = ""; // مسح القديم
-
-      [...this.files].forEach(file => {
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-          let element;
-
-          if(file.type.startsWith("image/")){
-            element = document.createElement("img");
-          } else if(file.type.startsWith("video/")){
-            element = document.createElement("video");
-            element.controls = true;
-          }
-
-          element.src = e.target.result;
-          preview.appendChild(element);
-        }
-
-        reader.readAsDataURL(file);
-      })
-    });
-
-  </script>
-
-</body>
-</html>
+      <div class="posts" id="postsList"></div>
 
     </section>
   </div>
@@ -410,6 +305,4 @@
 </body>
 
 </html>
-    
-
 
