@@ -1,1 +1,614 @@
-<!doctype html> <html lang="ar" dir="rtl"> <head>   <meta charset="utf-8" />   <meta name="viewport" content="width=device-width,initial-scale=1" />   <title>قائد الصف</title>   <link rel="icon" href="cd568523-cef5-466c-91e5-269c29984570.png" type="image/png">   <style>     :root{       --accent:#0b74de;       --bg:#f6f8fb;       --border-accent: rgb(104, 231, 240);     }     body{font-family:"Cairo",Tahoma,Arial,sans-serif;background:var(--bg);margin:0;padding:0;}     .container{max-width:900px;margin:30px auto;padding:20px;background:white;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid var(--border-accent);}     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}     h1{margin:0;font-size:22px;color:#222}     .badge{font-size:13px;padding:6px 10px;border-radius:6px;background:var(--accent);color:white;border:1px solid var(--border-accent);}     form{display:flex;gap:8px;flex-wrap:wrap;border:1px solid var(--border-accent);padding:10px;border-radius:6px;}     input,textarea,button,select{padding:8px 10px;border-radius:6px;border:1px solid var(--border-accent);font-size:14px}     textarea{min-height:80px;resize:vertical}     .posts{margin-top:18px;display:flex;flex-direction:column;gap:12px}     .post{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fff;position:relative;}     .post h3{margin:0 0 6px 0}     .meta{font-size:12px;color:#666;margin-bottom:8px}     .actions{display:flex;gap:8px;margin-top:8px;align-items:center}     .btn{cursor:pointer;border:1px solid var(--border-accent);}     .btn.primary{background:var(--accent);color:white;border:none}     .btn.ghost{background:transparent;border:1px solid var(--border-accent)}     .emoji-bar{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}     .emoji{cursor:pointer;font-size:20px;transition:transform 0.2s}     .emoji:hover{transform:scale(1.2)}     .emoji-count{font-size:13px;color:#333;margin-left:3px}     .login-box{display:flex;gap:8px;align-items:center}     .right{display:flex;gap:12px;align-items:center}     footer{font-size:13px;color:#666;margin-top:18px;text-align:center}     .small{font-size:13px;color:#444}     .pass-change{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fafcff;margin-top:12px}     .hint{font-size:13px;color:#666;margin-top:8px}     img{max-width:100%;border-radius:6px;margin-top:8px;}     * { border-color: var(--border-accent); }   </style> </head> <body>   <div class="container">     <header>       <div>         <h1>قائد الصف <span class="small">— لوحة تفاعلية</span></h1>         <div class="small">إدارة المنشورات والتفاعلات داخل الصف</div>       </div>       <div class="right">         <div id="userInfo" class="small"></div>         <div id="authButtons" class="login-box"></div>       </div>     </header>     <section id="mainArea">       <div id="loginArea">         <form id="loginForm" onsubmit="return false">           <select id="loginSelect" aria-label="اختر نوع الحساب">             <option value="guest">حساب ضيف</option>             <option value="admin">حساب ADMIN</option>           </select>           <input id="passwordInput" type="password" placeholder="كلمة المرور (لـ ADMIN)" />           <button id="loginBtn" class="btn primary">دخول</button>         </form>       </div>       <div id="postEditor" style="display:none;margin-top:12px">         <h3>إضافة منشور جديد</h3>         <form id="postForm" onsubmit="return false">           <input id="postTitle" placeholder="عنوان المنشور" />           <input id="postImage" type="file" accept="image/*" />           <textarea id="postBody" placeholder="نص المنشور..."></textarea>           <div style="display:flex;gap:8px;justify-content:flex-start">             <button id="addPostBtn" class="btn primary">نشر</button>             <button id="clearPostsBtn" class="btn ghost">مسح كل المنشورات (محلي)</button>           </div>         </form>         <div id="passChangeBox" class="pass-change" style="display:none">           <h4>تغيير كلمة مرور الأدمن</h4>           <input id="currentPass" type="password" placeholder="كلمة المرور الحالية" />           <input id="newPass" type="password" placeholder="كلمة المرور الجديدة" />           <input id="confirmPass" type="password" placeholder="تأكيد كلمة المرور الجديدة" />           <div style="display:flex;gap:8px;margin-top:8px">             <button id="changePassBtn" class="btn primary">تغيير كلمة المرور</button>             <button id="cancelChangeBtn" class="btn ghost" type="button">إلغاء</button>           </div>           <div class="hint">بعد التغيير، ستصبح هذه هي كلمة المرور المطلوبة لتسجيل الدخول كـ ADMIN.</div>         </div>       </div>       <div class="posts" id="postsList"></div>     </section>   </div>   <script>     /* 🎨 تغيير اللون تلقائياً كل ما يدخل المستخدم على الموقع */     function randomAccentColor() {       const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);       document.documentElement.style.setProperty('--accent', randomColor);       document.documentElement.style.setProperty('--border-accent', randomColor);     }     randomAccentColor();     const SESSION_KEY='qaed_session', POSTS_KEY='qaed_posts', REACT_KEY='qaed_reacts', ADMIN_PASS_KEY='qaed_admin_pass';     const DEFAULT_ADMIN_PASS = '12345678';     const loginSelect=document.getElementById('loginSelect');     const passwordInput=document.getElementById('passwordInput');     const loginBtn=document.getElementById('loginBtn');     const authButtons=document.getElementById('authButtons');     const userInfo=document.getElementById('userInfo');     const loginArea=document.getElementById('loginArea');     const postEditor=document.getElementById('postEditor');     const postTitle=document.getElementById('postTitle');     const postBody=document.getElementById('postBody');     const postImage=document.getElementById('postImage');     const postsList=document.getElementById('postsList');     const addPostBtn=document.getElementById('addPostBtn');     const clearPostsBtn=document.getElementById('clearPostsBtn');     const passChangeBox = document.getElementById('passChangeBox');     const currentPass = document.getElementById('currentPass');     const newPass = document.getElementById('newPass');     const confirmPass = document.getElementById('confirmPass');     const changePassBtn = document.getElementById('changePassBtn');     const cancelChangeBtn = document.getElementById('cancelChangeBtn');     function ensureAdminPass(){       if(!localStorage.getItem(ADMIN_PASS_KEY)){         localStorage.setItem(ADMIN_PASS_KEY, DEFAULT_ADMIN_PASS);       }     }     function getStoredAdminPass(){ return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_ADMIN_PASS; }     function setStoredAdminPass(p){ localStorage.setItem(ADMIN_PASS_KEY, String(p)); }     ensureAdminPass();     function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY))||null}catch(e){return null}}     function setSession(s){localStorage.setItem(SESSION_KEY,JSON.stringify(s));renderAuth();}     function clearSession(){localStorage.removeItem(SESSION_KEY);renderAuth();}     function loadPosts(){try{return JSON.parse(localStorage.getItem(POSTS_KEY))||[]}catch(e){return []}}     function savePosts(p){localStorage.setItem(POSTS_KEY,JSON.stringify(p));}     function loadReacts(){try{return JSON.parse(localStorage.getItem(REACT_KEY))||{};}catch(e){return {};} }     function saveReacts(r){localStorage.setItem(REACT_KEY,JSON.stringify(r));}     function escapeHtml(t){ return String(t).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }     function renderPosts(){       const posts=loadPosts();postsList.innerHTML='';       if(posts.length===0){postsList.innerHTML='<div style="color:#666">لا توجد منشورات بعد.</div>';return}       posts.forEach((p,idx)=>{         const el=document.createElement('div');el.className='post';         el.innerHTML=<div class="meta">بواسطة: <strong>${p.author}</strong> — ${new Date(p.time).toLocaleString('ar-EG')}</div>         <h3>${escapeHtml(p.title)}</h3><div>${escapeHtml(p.body).replace(/\n/g,'<br>')}</div>;         if(p.image){           const imgEl=document.createElement('img'); imgEl.src=p.image; el.appendChild(imgEl);         }         const emojiBar=document.createElement('div');emojiBar.className='emoji-bar';         const emojis=['👍','❤️','😂','👏','🤔','😮'];         emojis.forEach(e=>{           const count=p.reactions&&p.reactions[e]?p.reactions[e]:0;           const span=document.createElement('span');           span.innerHTML=<span class="emoji">${e}</span><span class="emoji-count">${count}</span>;           span.querySelector('.emoji').onclick=()=>reactToPost(idx,e);           emojiBar.appendChild(span);         });         el.appendChild(emojiBar);         const sess=getSession();         if(sess&&sess.role==='admin'){           const actions=document.createElement('div');actions.className='actions';           const del=document.createElement('button');del.className='btn ghost';del.textContent='🗑 حذف';           del.onclick=()=>{if(confirm('هل تريد حذف هذا المنشور؟'))deletePost(idx);};           const edit=document.createElement('button');edit.className='btn';edit.textContent='تعديل';           edit.onclick=()=>{editPost(idx);};           actions.appendChild(edit);actions.appendChild(del);           el.appendChild(actions);         }         postsList.prepend(el);       });     }     function reactToPost(index,emoji){       const posts=loadPosts(),reacts=loadReacts();       const sess=getSession()||{role:'guest',name:'ضيف'};       const userId=sess.name+'_'+sess.role;       if(!reacts[index])reacts[index]={};       const prev=reacts[index][userId];       if(prev===emoji){         if(posts[index].reactions && posts[index].reactions[emoji]>0)posts[index].reactions[emoji]--;         delete reacts[index][userId];       }else{         if(prev && posts[index].reactions && posts[index].reactions[prev]>0)posts[index].reactions[prev]--;         if(!posts[index].reactions)posts[index].reactions={};         if(!posts[index].reactions[emoji])posts[index].reactions[emoji]=0;         posts[index].reactions[emoji]++;         reacts[index][userId]=emoji;       }       savePosts(posts);saveReacts(reacts);renderPosts();     }     function addPost(title, body, author, image){       const posts = loadPosts();       posts.push({title, body, author, time: Date.now(), reactions:{}, image});       savePosts(posts);       renderPosts();     }     function deletePost(i){const posts=loadPosts();posts.splice(i,1);savePosts(posts);renderPosts();}     function editPost(i){       const posts=loadPosts();const p=posts[i];       const newTitle=prompt('عدل عنوان المنشور:',p.title); if(newTitle===null) return;       const newBody=prompt('عدل نص المنشور:',p.body); if(newBody===null) return;       posts[i].title=newTitle; posts[i].body=newBody; savePosts(posts); renderPosts();     }     clearPostsBtn.onclick=()=>{ if(confirm('مسح جميع المنشورات؟')){ savePosts([]); renderPosts(); } };     loginBtn.onclick=()=>{       const choice=loginSelect.value;       if(choice==='guest'){ setSession({role:'guest',name:'ضيف'}); return; }       const pass=passwordInput.value||'';       if(pass===getStoredAdminPass()){ setSession({role:'admin',name:'ADMIN'}); passwordInput.value=''; }       else{ alert('كلمة المرور خاطئة'); }     }     function logout(){ clearSession(); }     function renderAuth(){       const sess=getSession(); authButtons.innerHTML='';       if(!sess){         userInfo.textContent=''; loginArea.style.display='block'; postEditor.style.display='none'; passChangeBox.style.display='none';       } else {         userInfo.textContent=${sess.name} — ${sess.role};         loginArea.style.display='none';         const out=document.createElement('button'); out.className='btn ghost'; out.textContent='تسجيل خروج'; out.onclick=logout;         authButtons.appendChild(out);         if(sess.role==='admin'){ postEditor.style.display='block'; passChangeBox.style.display='block'; }         else { postEditor.style.display='none'; passChangeBox.style.display='none'; }       }       renderPosts();     }     addPostBtn.onclick=()=>{       const sess = getSession();       if(!sess || sess.role !== 'admin'){ alert('يجب أن تكون ADMIN لنشر منشور.'); return; }       const t = postTitle.value.trim(), b = postBody.value.trim();       if(!t && !b && (!postImage.files || postImage.files.length===0)){ alert('أدخل عنوان أو نص أو صورة للمنشور.'); return; }       if(postImage.files && postImage.files[0]){         const reader = new FileReader();         reader.onload = function(e){           addPost(t,b,sess.name,e.target.result);           postTitle.value=''; postBody.value=''; postImage.value='';         };         reader.readAsDataURL(postImage.files[0]);       } else {         addPost(t,b,sess.name,'');         postTitle.value=''; postBody.value='';       }     };     changePassBtn.onclick=()=>{       const cur = currentPass.value || '';       const n = newPass.value || '';       const c = confirmPass.value || '';       const stored = getStoredAdminPass();       if(cur === ''){ alert('أدخل كلمة المرور الحالية.'); return; }       if(cur !== stored){ alert('كلمة المرور الحالية غير صحيحة.'); return; }       if(n.length < 4){ alert('كلمة المرور الجديدة قصيرة — اجعلها 4 أحرف أو أكثر.'); return; }       if(n !== c){ alert('تأكيد كلمة المرور لا يطابق.'); return; }       setStoredAdminPass(n);       currentPass.value=''; newPass.value=''; confirmPass.value='';       alert('تم تغيير كلمة مرور الأدمن بنجاح.');     };     cancelChangeBtn.onclick= ()=>{       currentPass.value=''; newPass.value=''; confirmPass.value='';     };     (function init(){ ensureAdminPass(); renderAuth(); renderPosts(); })();   </script> </body> </html>
+<!doctype html> 
+
+<html lang="ar" dir="rtl">
+
+
+
+<head>
+
+
+
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>قائد الصف</title>
+
+  <link rel="icon" href="cd568523-cef5-466c-91e5-269c29984570.png" type="image/png">
+
+
+
+  <style>
+
+    :root{
+
+      --accent:#0b74de;
+
+      --bg:#f6f8fb;
+
+      --border-accent: rgb(104, 231, 240);
+
+    }
+
+
+
+    body{font-family:"Cairo",Tahoma,Arial,sans-serif;background:var(--bg);margin:0;padding:0;}
+
+    .container{max-width:900px;margin:30px auto;padding:20px;background:white;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid var(--border-accent);}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+
+    h1{margin:0;font-size:22px;color:#222}
+
+    .badge{font-size:13px;padding:6px 10px;border-radius:6px;background:var(--accent);color:white;border:1px solid var(--border-accent);}
+
+    form{display:flex;gap:8px;flex-wrap:wrap;border:1px solid var(--border-accent);padding:10px;border-radius:6px;}
+
+    input,textarea,button,select{padding:8px 10px;border-radius:6px;border:1px solid var(--border-accent);font-size:14px}
+
+    textarea{min-height:80px;resize:vertical}
+
+    .posts{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+
+    .post{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fff;position:relative;}
+
+    .post h3{margin:0 0 6px 0}
+
+    .meta{font-size:12px;color:#666;margin-bottom:8px}
+
+    .actions{display:flex;gap:8px;margin-top:8px;align-items:center}
+
+    .btn{cursor:pointer;border:1px solid var(--border-accent);}
+
+    .btn.primary{background:var(--accent);color:white;border:none}
+
+    .btn.ghost{background:transparent;border:1px solid var(--border-accent)}
+
+    .emoji-bar{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+
+    .emoji{cursor:pointer;font-size:20px;transition:transform 0.2s}
+
+    .emoji:hover{transform:scale(1.2)}
+
+    .emoji-count{font-size:13px;color:#333;margin-left:3px}
+
+    .login-box{display:flex;gap:8px;align-items:center}
+
+    .right{display:flex;gap:12px;align-items:center}
+
+    footer{font-size:13px;color:#666;margin-top:18px;text-align:center}
+
+    .small{font-size:13px;color:#444}
+
+    .pass-change{border:1px solid var(--border-accent);padding:12px;border-radius:8px;background:#fafcff;margin-top:12px}
+
+    .hint{font-size:13px;color:#666;margin-top:8px}
+
+    img{max-width:100%;border-radius:6px;margin-top:8px;}
+
+    * { border-color: var(--border-accent); }
+
+  </style>
+
+
+
+</head>
+
+
+
+<body>
+
+
+
+  <div class="container">
+
+
+
+    <header>
+
+      <div>
+
+        <h1>قائد الصف <span class="small">— لوحة تفاعلية</span></h1>
+
+        <div class="small">إدارة المنشورات والتفاعلات داخل الصف</div>
+
+      </div>
+
+
+
+      <div class="right">
+
+        <div id="userInfo" class="small"></div>
+
+        <div id="authButtons" class="login-box"></div>
+
+      </div>
+
+    </header>
+
+
+
+    <section id="mainArea">
+
+
+
+      <div id="loginArea">
+
+        <form id="loginForm" onsubmit="return false">
+
+          <select id="loginSelect" aria-label="اختر نوع الحساب">
+
+            <option value="guest">حساب ضيف</option>
+
+            <option value="admin">حساب ADMIN</option>
+
+          </select>
+
+          <input id="passwordInput" type="password" placeholder="كلمة المرور (لـ ADMIN)" />
+
+          <button id="loginBtn" class="btn primary">دخول</button>
+
+        </form>
+
+      </div>
+
+
+
+      <div id="postEditor" style="display:none;margin-top:12px">
+
+        <h3>إضافة منشور جديد</h3>
+
+        <form id="postForm" onsubmit="return false">
+
+          <input id="postTitle" placeholder="عنوان المنشور" />
+
+          <input id="postImage" type="file" accept="image/*" />
+
+          <textarea id="postBody" placeholder="نص المنشور..."></textarea>
+
+          
+
+          <div style="display:flex;gap:8px;justify-content:flex-start">
+
+            <button id="addPostBtn" class="btn primary">نشر</button>
+
+            <button id="clearPostsBtn" class="btn ghost">مسح كل المنشورات (محلي)</button>
+
+          </div>
+
+        </form>
+
+
+
+        <div id="passChangeBox" class="pass-change" style="display:none">
+
+          <h4>تغيير كلمة مرور الأدمن</h4>
+
+          <input id="currentPass" type="password" placeholder="كلمة المرور الحالية" />
+
+          <input id="newPass" type="password" placeholder="كلمة المرور الجديدة" />
+
+          <input id="confirmPass" type="password" placeholder="تأكيد كلمة المرور الجديدة" />
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+
+            <button id="changePassBtn" class="btn primary">تغيير كلمة المرور</button>
+
+            <button id="cancelChangeBtn" class="btn ghost" type="button">إلغاء</button>
+
+          </div>
+
+          <div class="hint">بعد التغيير، ستصبح هذه هي كلمة المرور المطلوبة لتسجيل الدخول كـ ADMIN.</div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="posts" id="postsList"></div>
+
+
+
+    </section>
+
+  </div>
+
+
+
+  <script>
+
+
+
+    /* 🎨 تغيير اللون تلقائياً كل ما يدخل المستخدم على الموقع */
+
+    function randomAccentColor() {
+
+      const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
+
+      document.documentElement.style.setProperty('--accent', randomColor);
+
+      document.documentElement.style.setProperty('--border-accent', randomColor);
+
+    }
+
+    randomAccentColor();
+
+
+
+
+
+    const SESSION_KEY='qaed_session', POSTS_KEY='qaed_posts', REACT_KEY='qaed_reacts', ADMIN_PASS_KEY='qaed_admin_pass';
+
+    const DEFAULT_ADMIN_PASS = '12345678';
+
+
+
+    const loginSelect=document.getElementById('loginSelect');
+
+    const passwordInput=document.getElementById('passwordInput');
+
+    const loginBtn=document.getElementById('loginBtn');
+
+    const authButtons=document.getElementById('authButtons');
+
+    const userInfo=document.getElementById('userInfo');
+
+    const loginArea=document.getElementById('loginArea');
+
+    const postEditor=document.getElementById('postEditor');
+
+    const postTitle=document.getElementById('postTitle');
+
+    const postBody=document.getElementById('postBody');
+
+    const postImage=document.getElementById('postImage');
+
+    const postsList=document.getElementById('postsList');
+
+    const addPostBtn=document.getElementById('addPostBtn');
+
+    const clearPostsBtn=document.getElementById('clearPostsBtn');
+
+    const passChangeBox = document.getElementById('passChangeBox');
+
+    const currentPass = document.getElementById('currentPass');
+
+    const newPass = document.getElementById('newPass');
+
+    const confirmPass = document.getElementById('confirmPass');
+
+    const changePassBtn = document.getElementById('changePassBtn');
+
+    const cancelChangeBtn = document.getElementById('cancelChangeBtn');
+
+
+
+    function ensureAdminPass(){
+
+      if(!localStorage.getItem(ADMIN_PASS_KEY)){
+
+        localStorage.setItem(ADMIN_PASS_KEY, DEFAULT_ADMIN_PASS);
+
+      }
+
+    }
+
+    function getStoredAdminPass(){ return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_ADMIN_PASS; }
+
+    function setStoredAdminPass(p){ localStorage.setItem(ADMIN_PASS_KEY, String(p)); }
+
+
+
+    ensureAdminPass();
+
+
+
+    function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY))||null}catch(e){return null}}
+
+    function setSession(s){localStorage.setItem(SESSION_KEY,JSON.stringify(s));renderAuth();}
+
+    function clearSession(){localStorage.removeItem(SESSION_KEY);renderAuth();}
+
+
+
+    function loadPosts(){try{return JSON.parse(localStorage.getItem(POSTS_KEY))||[]}catch(e){return []}}
+
+    function savePosts(p){localStorage.setItem(POSTS_KEY,JSON.stringify(p));}
+
+    function loadReacts(){try{return JSON.parse(localStorage.getItem(REACT_KEY))||{};}catch(e){return {};} }
+
+    function saveReacts(r){localStorage.setItem(REACT_KEY,JSON.stringify(r));}
+
+
+
+    function escapeHtml(t){ return String(t).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+
+
+    function renderPosts(){
+
+      const posts=loadPosts();postsList.innerHTML='';
+
+      if(posts.length===0){postsList.innerHTML='<div style="color:#666">لا توجد منشورات بعد.</div>';return}
+
+      posts.forEach((p,idx)=>{
+
+        const el=document.createElement('div');el.className='post';
+
+        el.innerHTML=`<div class="meta">بواسطة: <strong>${p.author}</strong> — ${new Date(p.time).toLocaleString('ar-EG')}</div>
+
+        <h3>${escapeHtml(p.title)}</h3><div>${escapeHtml(p.body).replace(/\n/g,'<br>')}</div>`;
+
+        if(p.image){
+
+          const imgEl=document.createElement('img'); imgEl.src=p.image; el.appendChild(imgEl);
+
+        }
+
+        const emojiBar=document.createElement('div');emojiBar.className='emoji-bar';
+
+        const emojis=['👍','❤️','😂','👏','🤔','😮'];
+
+        emojis.forEach(e=>{
+
+          const count=p.reactions&&p.reactions[e]?p.reactions[e]:0;
+
+          const span=document.createElement('span');
+
+          span.innerHTML=`<span class="emoji">${e}</span><span class="emoji-count">${count}</span>`;
+
+          span.querySelector('.emoji').onclick=()=>reactToPost(idx,e);
+
+          emojiBar.appendChild(span);
+
+        });
+
+        el.appendChild(emojiBar);
+
+
+
+        const sess=getSession();
+
+        if(sess&&sess.role==='admin'){
+
+          const actions=document.createElement('div');actions.className='actions';
+
+          const del=document.createElement('button');del.className='btn ghost';del.textContent='🗑 حذف';
+
+          del.onclick=()=>{if(confirm('هل تريد حذف هذا المنشور؟'))deletePost(idx);};
+
+          const edit=document.createElement('button');edit.className='btn';edit.textContent='تعديل';
+
+          edit.onclick=()=>{editPost(idx);};
+
+          actions.appendChild(edit);actions.appendChild(del);
+
+          el.appendChild(actions);
+
+        }
+
+        postsList.prepend(el);
+
+      });
+
+    }
+
+
+
+    function reactToPost(index,emoji){
+
+      const posts=loadPosts(),reacts=loadReacts();
+
+      const sess=getSession()||{role:'guest',name:'ضيف'};
+
+      const userId=sess.name+'_'+sess.role;
+
+      if(!reacts[index])reacts[index]={};
+
+      const prev=reacts[index][userId];
+
+      if(prev===emoji){
+
+        if(posts[index].reactions && posts[index].reactions[emoji]>0)posts[index].reactions[emoji]--;
+
+        delete reacts[index][userId];
+
+      }else{
+
+        if(prev && posts[index].reactions && posts[index].reactions[prev]>0)posts[index].reactions[prev]--;
+
+        if(!posts[index].reactions)posts[index].reactions={};
+
+        if(!posts[index].reactions[emoji])posts[index].reactions[emoji]=0;
+
+        posts[index].reactions[emoji]++;
+
+        reacts[index][userId]=emoji;
+
+      }
+
+      savePosts(posts);saveReacts(reacts);renderPosts();
+
+    }
+
+
+
+    function addPost(title, body, author, image){
+
+      const posts = loadPosts();
+
+      posts.push({title, body, author, time: Date.now(), reactions:{}, image});
+
+      savePosts(posts);
+
+      renderPosts();
+
+    }
+
+
+
+    function deletePost(i){const posts=loadPosts();posts.splice(i,1);savePosts(posts);renderPosts();}
+
+    function editPost(i){
+
+      const posts=loadPosts();const p=posts[i];
+
+      const newTitle=prompt('عدل عنوان المنشور:',p.title); if(newTitle===null) return;
+
+      const newBody=prompt('عدل نص المنشور:',p.body); if(newBody===null) return;
+
+      posts[i].title=newTitle; posts[i].body=newBody; savePosts(posts); renderPosts();
+
+    }
+
+
+
+    clearPostsBtn.onclick=()=>{ if(confirm('مسح جميع المنشورات؟')){ savePosts([]); renderPosts(); } };
+
+
+
+    loginBtn.onclick=()=>{
+
+      const choice=loginSelect.value;
+
+      if(choice==='guest'){ setSession({role:'guest',name:'ضيف'}); return; }
+
+      const pass=passwordInput.value||'';
+
+      if(pass===getStoredAdminPass()){ setSession({role:'admin',name:'ADMIN'}); passwordInput.value=''; }
+
+      else{ alert('كلمة المرور خاطئة'); }
+
+    }
+
+
+
+    function logout(){ clearSession(); }
+
+
+
+    function renderAuth(){
+
+      const sess=getSession(); authButtons.innerHTML='';
+
+      if(!sess){
+
+        userInfo.textContent=''; loginArea.style.display='block'; postEditor.style.display='none'; passChangeBox.style.display='none';
+
+      } else {
+
+        userInfo.textContent=`${sess.name} — ${sess.role}`;
+
+        loginArea.style.display='none';
+
+        const out=document.createElement('button'); out.className='btn ghost'; out.textContent='تسجيل خروج'; out.onclick=logout;
+
+        authButtons.appendChild(out);
+
+        if(sess.role==='admin'){ postEditor.style.display='block'; passChangeBox.style.display='block'; }
+
+        else { postEditor.style.display='none'; passChangeBox.style.display='none'; }
+
+      }
+
+      renderPosts();
+
+    }
+
+
+
+    addPostBtn.onclick=()=>{
+
+      const sess = getSession();
+
+      if(!sess || sess.role !== 'admin'){ alert('يجب أن تكون ADMIN لنشر منشور.'); return; }
+
+      const t = postTitle.value.trim(), b = postBody.value.trim();
+
+
+
+      if(!t && !b && (!postImage.files || postImage.files.length===0)){ alert('أدخل عنوان أو نص أو صورة للمنشور.'); return; }
+
+
+
+      if(postImage.files && postImage.files[0]){
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+
+          addPost(t,b,sess.name,e.target.result);
+
+          postTitle.value=''; postBody.value=''; postImage.value='';
+
+        };
+
+        reader.readAsDataURL(postImage.files[0]);
+
+      } else {
+
+        addPost(t,b,sess.name,'');
+
+        postTitle.value=''; postBody.value='';
+
+      }
+
+    };
+
+
+
+    changePassBtn.onclick=()=>{
+
+      const cur = currentPass.value || '';
+
+      const n = newPass.value || '';
+
+      const c = confirmPass.value || '';
+
+      const stored = getStoredAdminPass();
+
+
+
+      if(cur === ''){ alert('أدخل كلمة المرور الحالية.'); return; }
+
+      if(cur !== stored){ alert('كلمة المرور الحالية غير صحيحة.'); return; }
+
+      if(n.length < 4){ alert('كلمة المرور الجديدة قصيرة — اجعلها 4 أحرف أو أكثر.'); return; }
+
+      if(n !== c){ alert('تأكيد كلمة المرور لا يطابق.'); return; }
+
+
+
+      setStoredAdminPass(n);
+
+      currentPass.value=''; newPass.value=''; confirmPass.value='';
+
+      alert('تم تغيير كلمة مرور الأدمن بنجاح.');
+
+    };
+
+
+
+    cancelChangeBtn.onclick=()=>{ 
+
+      currentPass.value=''; newPass.value=''; confirmPass.value=''; 
+
+    };
+
+
+
+    (function init(){ ensureAdminPass(); renderAuth(); renderPosts(); })();
+
+
+
+  </script>
+
+
+
+</body>
+
+
+
+</html>
+
